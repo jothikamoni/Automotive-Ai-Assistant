@@ -1,0 +1,69 @@
+# Install (first time only)
+!pip install sentence-transformers faiss-cpu
+
+# -----------------------------
+# DATA (Knowledge)
+# -----------------------------
+documents = [
+    "Ford Explorer is a 7-seater SUV suitable for families",
+    "Ford Escape is a compact SUV with good mileage",
+    "Ford Ranger 2023 requires oil change every 10000 km",
+    "Engine warning light means engine malfunction",
+    "Battery warning light means charging issue",
+    "Ford F-150 is best for heavy towing"
+]
+
+# -----------------------------
+# EMBEDDING + FAISS
+# -----------------------------
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+embeddings = model.encode(documents)
+
+dimension = len(embeddings[0])
+index = faiss.IndexFlatL2(dimension)
+index.add(np.array(embeddings))
+
+# -----------------------------
+# FUNCTIONS
+# -----------------------------
+
+# SEARCH
+def search(query):
+    query_vec = model.encode([query])
+    D, I = index.search(query_vec, 2)
+    return [documents[i] for i in I[0]]
+
+# ASK (RAG-style)
+def ask(query):
+    result = search(query)
+    return "Answer: " + result[0]
+
+# RECOMMEND
+def recommend(query):
+    query = query.lower()
+    
+    if "family" in query:
+        return ["Ford Explorer", "Ford Escape"]
+    
+    if "towing" in query or "pickup" in query:
+        return ["Ford Ranger", "Ford F-150"]
+    
+    return ["No match"]
+
+# -----------------------------
+# DEMO OUTPUT
+# -----------------------------
+
+print("----- SEARCH -----")
+print(search("Which SUV has 7 seats?"))
+
+print("\n----- ASK -----")
+print(ask("What does engine warning light mean?"))
+
+print("\n----- RECOMMEND -----")
+print(recommend("I need a family car"))
